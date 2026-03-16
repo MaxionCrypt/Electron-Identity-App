@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore backend/src/Host/Host.csproj
+
+      - name: Build
+        run: dotnet build backend/src/Host/Host.csproj --configuration Release --no-restore
+
+      - name: Test (if test projects exist)
+        shell: bash
+        run: |
+          if find backend -name '*Tests.csproj' | grep -q .; then
+            dotnet test backend/Backend.sln --configuration Release --no-build
+          else
+            echo "No test projects found. Skipping tests."
+          fi
