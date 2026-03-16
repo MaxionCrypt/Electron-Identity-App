@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Electron Auth Portal</title>
+    <style>
+      :root {
+        --bg-top: #f4efe6;
+        --bg-bottom: #d9e7ea;
+        --panel: #fffdf8;
+        --panel-muted: #f0ebe1;
+        --text: #1e2a2b;
+        --muted: #5c6a6a;
+        --accent: #0b7a75;
+        --accent-strong: #06605c;
+        --focus: #f08a5d;
+        --danger: #c23a3a;
+        --shadow: rgba(13, 41, 47, 0.18);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100svh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2.5rem 1rem;
+        font-family: "Aptos", "Segoe UI Variable Display", "Candara", "Trebuchet MS", sans-serif;
+        background: linear-gradient(160deg, var(--bg-top), var(--bg-bottom));
+        color: var(--text);
+        overflow-x: hidden;
+      }
+
+      .orb {
+        position: fixed;
+        border-radius: 999px;
+        filter: blur(0.5px);
+        z-index: -1;
+        animation: drift 14s ease-in-out infinite;
+      }
+
+      .orb-a {
+        width: 320px;
+        height: 320px;
+        top: -120px;
+        right: -70px;
+        background: radial-gradient(circle at 30% 35%, #b7ddd8, transparent 70%);
+      }
+
+      .orb-b {
+        width: 260px;
+        height: 260px;
+        bottom: -100px;
+        left: -80px;
+        background: radial-gradient(circle at 50% 50%, #f4ba99, transparent 68%);
+        animation-delay: -6s;
+      }
+
+      .shell {
+        width: min(920px, 100%);
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        border-radius: 24px;
+        overflow: hidden;
+        background: var(--panel);
+        box-shadow: 0 20px 60px var(--shadow);
+      }
+
+      .hero {
+        padding: 2.5rem;
+        background:
+          linear-gradient(180deg, rgba(11, 122, 117, 0.9), rgba(6, 96, 92, 0.93)),
+          radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.18), transparent 60%);
+        color: #f4fffd;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .hero h1 {
+        margin: 0 0 0.8rem;
+        font-size: clamp(1.8rem, 2.8vw, 2.4rem);
+        line-height: 1.15;
+        letter-spacing: 0.01em;
+      }
+
+      .hero p {
+        margin: 0;
+        color: rgba(244, 255, 253, 0.86);
+        line-height: 1.5;
+      }
+
+      .hero-note {
+        margin-top: 1.5rem;
+        font-size: 0.94rem;
+        color: rgba(244, 255, 253, 0.76);
+      }
+
+      .panel {
+        padding: 2rem 1.6rem;
+      }
+
+      .switch {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.4rem;
+        padding: 0.35rem;
+        background: var(--panel-muted);
+        border-radius: 12px;
+      }
+
+      .switch button {
+        border: 0;
+        border-radius: 9px;
+        padding: 0.65rem 0.8rem;
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--muted);
+        background: transparent;
+        cursor: pointer;
+        transition: all 160ms ease;
+      }
+
+      .switch button.active {
+        background: #ffffff;
+        color: var(--text);
+        box-shadow: 0 8px 16px rgba(34, 51, 61, 0.12);
+      }
+
+      .pane-wrap {
+        margin-top: 1rem;
+        position: relative;
+        min-height: 360px;
+      }
+
+      .pane {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        gap: 0.9rem;
+        align-content: start;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(10px);
+        transition: opacity 180ms ease, transform 220ms ease;
+      }
+
+      .pane.active {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0);
+      }
+
+      .pane h2 {
+        margin: 0 0 0.1rem;
+        font-size: 1.35rem;
+      }
+
+      .pane-subtitle {
+        margin: 0 0 0.35rem;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      label {
+        display: grid;
+        gap: 0.35rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #2e3d3f;
+      }
+
+      input {
+        width: 100%;
+        border: 1px solid #c5d0d1;
+        border-radius: 10px;
+        padding: 0.7rem 0.8rem;
+        font: inherit;
+        color: var(--text);
+        background: #ffffff;
+      }
+
+      input:focus-visible {
+        outline: 2px solid var(--focus);
+        outline-offset: 1px;
+        border-color: transparent;
+      }
+
+      .row-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+      }
+
+      .form-btn {
+        border: 0;
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #f9ffff;
+        background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+        cursor: pointer;
+      }
+
+      .form-btn:focus-visible {
+        outline: 2px solid var(--focus);
+        outline-offset: 2px;
+      }
+
+      .status {
+        min-height: 1.35rem;
+        margin-top: 0.7rem;
+        font-size: 0.92rem;
+        font-weight: 600;
+        color: var(--accent-strong);
+      }
+
+      .status.error {
+        color: var(--danger);
+      }
+
+      .session-tools {
+        margin-top: 0.6rem;
+        display: grid;
+        gap: 0.7rem;
+      }
+
+      .tool-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 0.55rem;
+      }
+
+      .ghost-btn {
+        border: 1px solid #b2c2c4;
+        border-radius: 10px;
+        padding: 0.6rem 0.7rem;
+        background: #fff;
+        color: #2d3f41;
+        font-size: 0.85rem;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .ghost-btn:focus-visible {
+        outline: 2px solid var(--focus);
+        outline-offset: 2px;
+      }
+
+      .api-output {
+        margin: 0;
+        min-height: 84px;
+        max-height: 170px;
+        overflow: auto;
+        padding: 0.7rem;
+        border-radius: 10px;
+        border: 1px solid #d0dadb;
+        background: #f7faf9;
+        font-size: 0.79rem;
+        color: #1f2d2f;
+      }
+
+      @keyframes drift {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(12px);
+        }
+      }
+
+      @media (max-width: 860px) {
+        .shell {
+          grid-template-columns: 1fr;
+        }
+
+        .hero {
+          padding: 1.5rem;
+        }
+
+        .panel {
+          padding: 1.25rem 1rem 1.5rem;
+        }
+
+        .pane-wrap {
+          min-height: 380px;
+        }
+      }
+
+      @media (max-width: 420px) {
+        .row-2 {
+          grid-template-columns: 1fr;
+        }
+
+        .tool-buttons {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="orb orb-a" aria-hidden="true"></div>
+    <div class="orb orb-b" aria-hidden="true"></div>
+
+    <main class="shell">
+      <section class="hero">
+        <h1>Welcome Back to Atlas Desk</h1>
+        <p>Use your account to access the Electron modular monolith workspace.</p>
+        <p class="hero-note">JWT auth + role-based backend scaffold (User and Admin roles).</p>
+      </section>
+
+      <section class="panel">
+        <nav class="switch" aria-label="Authentication pages">
+          <button type="button" class="active" data-view="login">Login</button>
+          <button type="button" data-view="register">Register</button>
+        </nav>
+
+        <div class="pane-wrap">
+          <form id="loginForm" class="pane active" novalidate>
+            <h2>Sign In</h2>
+            <p class="pane-subtitle">Enter your credentials to continue.</p>
+
+            <label for="loginEmail">
+              Email
+              <input id="loginEmail" name="email" type="email" autocomplete="email" required />
+            </label>
+
+            <label for="loginPassword">
+              Password
+              <input
+                id="loginPassword"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                required
+              />
+            </label>
+
+            <button class="form-btn" type="submit">Login</button>
+          </form>
+
+          <form id="registerForm" class="pane" novalidate>
+            <h2>Create Account</h2>
+            <p class="pane-subtitle">Register a new profile for your workspace.</p>
+
+            <div class="row-2">
+              <label for="firstName">
+                First Name
+                <input id="firstName" name="firstName" type="text" autocomplete="given-name" required />
+              </label>
+
+              <label for="lastName">
+                Last Name
+                <input id="lastName" name="lastName" type="text" autocomplete="family-name" required />
+              </label>
+            </div>
+
+            <label for="registerEmail">
+              Email
+              <input id="registerEmail" name="email" type="email" autocomplete="email" required />
+            </label>
+
+            <label for="registerPassword">
+              Password
+              <input
+                id="registerPassword"
+                name="password"
+                type="password"
+                minlength="8"
+                autocomplete="new-password"
+                required
+              />
+            </label>
+
+            <button class="form-btn" type="submit">Register</button>
+          </form>
+        </div>
+
+        <p id="statusMessage" class="status" aria-live="polite"></p>
+
+        <div class="session-tools">
+          <div class="tool-buttons">
+            <button id="whoAmIBtn" class="ghost-btn" type="button">Who Am I</button>
+            <button id="listUsersBtn" class="ghost-btn" type="button">Admin: List Users</button>
+            <button id="logoutBtn" class="ghost-btn" type="button">Logout</button>
+          </div>
+          <pre id="apiOutput" class="api-output">No active session.</pre>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const TOKEN_STORAGE_KEY = "atlas_auth_token";
+      const tabButtons = document.querySelectorAll("[data-view]");
+      const forms = {
+        login: document.getElementById("loginForm"),
+        register: document.getElementById("registerForm")
+      };
+      const statusMessage = document.getElementById("statusMessage");
+      const apiOutput = document.getElementById("apiOutput");
+      const whoAmIBtn = document.getElementById("whoAmIBtn");
+      const listUsersBtn = document.getElementById("listUsersBtn");
+      const logoutBtn = document.getElementById("logoutBtn");
+
+      let accessToken = window.localStorage.getItem(TOKEN_STORAGE_KEY) || "";
+
+      async function fetchJson(path, options = {}) {
+        const response = await fetch(path, options);
+        const bodyText = await response.text();
+        let body = null;
+
+        if (bodyText) {
+          try {
+            body = JSON.parse(bodyText);
+          } catch (_) {
+            body = null;
+          }
+        }
+
+        if (!response.ok) {
+          const message = body && typeof body.error === "string" ? body.error : `HTTP ${response.status}`;
+          throw new Error(message);
+        }
+
+        return body;
+      }
+
+      const api = window.backendAPI ?? {
+        register: (payload) =>
+          fetchJson("/api/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          }),
+        login: (payload) =>
+          fetchJson("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          }),
+        me: (token) =>
+          fetchJson("/api/auth/me", {
+            headers: { Authorization: `Bearer ${token}` }
+          }),
+        adminUsers: (token) =>
+          fetchJson("/api/admin/users", {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+      };
+
+      function setStatus(text, isError = false) {
+        statusMessage.textContent = text;
+        statusMessage.classList.toggle("error", isError);
+      }
+
+      function setView(view) {
+        tabButtons.forEach((button) => {
+          button.classList.toggle("active", button.dataset.view === view);
+        });
+
+        Object.entries(forms).forEach(([name, form]) => {
+          form.classList.toggle("active", name === view);
+        });
+
+        window.location.hash = view;
+        setStatus("");
+      }
+
+      function setOutput(data) {
+        apiOutput.textContent =
+          typeof data === "string" ? data : JSON.stringify(data, null, 2);
+      }
+
+      function setSession(authResponse) {
+        accessToken = authResponse.accessToken;
+        window.localStorage.setItem(TOKEN_STORAGE_KEY, accessToken);
+        const user = authResponse.user;
+        setStatus(`Authenticated as ${user.email} (${user.role}).`);
+        setOutput(user);
+      }
+
+      function clearSession() {
+        accessToken = "";
+        window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+        setStatus("Session cleared.");
+        setOutput("No active session.");
+      }
+
+      tabButtons.forEach((button) => {
+        button.addEventListener("click", () => setView(button.dataset.view));
+      });
+
+      forms.login.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const email = document.getElementById("loginEmail").value.trim();
+        const password = document.getElementById("loginPassword").value;
+
+        if (!email || !password) {
+          setStatus("Please fill in email and password.", true);
+          return;
+        }
+
+        setStatus("Signing in...");
+        try {
+          const result = await api.login({ email, password });
+          setSession(result);
+        } catch (err) {
+          setStatus(err.message, true);
+        }
+      });
+
+      forms.register.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const firstName = document.getElementById("firstName").value.trim();
+        const lastName = document.getElementById("lastName").value.trim();
+        const email = document.getElementById("registerEmail").value.trim();
+        const password = document.getElementById("registerPassword").value;
+
+        if (!firstName || !lastName || !email || password.length < 8) {
+          setStatus("Complete all fields and use a password with at least 8 characters.", true);
+          return;
+        }
+
+        setStatus("Creating account...");
+        try {
+          const result = await api.register({
+            firstName,
+            lastName,
+            email,
+            password
+          });
+          setSession(result);
+          setView("login");
+        } catch (err) {
+          setStatus(err.message, true);
+        }
+      });
+
+      whoAmIBtn.addEventListener("click", async () => {
+        if (!accessToken) {
+          setStatus("Login first to call /api/auth/me.", true);
+          return;
+        }
+
+        setStatus("Fetching profile...");
+        try {
+          const me = await api.me(accessToken);
+          setStatus(`Authenticated as ${me.email} (${me.role}).`);
+          setOutput(me);
+        } catch (err) {
+          setStatus(err.message, true);
+        }
+      });
+
+      listUsersBtn.addEventListener("click", async () => {
+        if (!accessToken) {
+          setStatus("Login first to call /api/admin/users.", true);
+          return;
+        }
+
+        setStatus("Fetching users...");
+        try {
+          const users = await api.adminUsers(accessToken);
+          setStatus(`Loaded ${users.length} users.`);
+          setOutput(users);
+        } catch (err) {
+          setStatus(err.message, true);
+        }
+      });
+
+      logoutBtn.addEventListener("click", () => clearSession());
+
+      const initialView = window.location.hash === "#register" ? "register" : "login";
+      setView(initialView);
+
+      if (accessToken) {
+        api.me(accessToken)
+          .then((me) => {
+            setStatus(`Welcome back ${me.email} (${me.role}).`);
+            setOutput(me);
+          })
+          .catch(() => clearSession());
+      }
+    </script>
+  </body>
+</html>
